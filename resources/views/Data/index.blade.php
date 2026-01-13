@@ -49,10 +49,6 @@
                     </div>
                 </div>
 
-                <div class="mt-3 d-flex gap-2">
-                    <a href="{{ route('data.index', ['selected' => $travel->id]) }}" class="btn btn-sm btn-outline-primary open-link me-auto">Lihat</a>
-                    <button class="btn btn-sm btn-outline-danger delete-btn" data-action="{{ route('data.destroy', $travel) }}">Hapus</button>
-                </div>
             </div>
             @endforeach
 
@@ -66,7 +62,8 @@
 
             <div id="detail-panel">
                 @if($selected)
-                    @include('data._detail', ['travel' => $selected])
+                    {{-- sesuaikan include dengan folder Data (besar kecil sesuai filesystem) --}}
+                    @include('Data._detail', ['travel' => $selected])
                 @else
                     <div class="card card-custom p-4">
                         <div class="text-muted">Pilih salah satu data di kiri untuk melihat detail</div>

@@ -1,77 +1,122 @@
-@extends('layouts.app')
+<?php
 
-@section('content')
-<div class="container-fluid">
-    <h3>Detail Perjalanan — #{{ $travel->id }}</h3>
-    <div class="mb-3">
-        <a href="{{ route('travel.index') }}" class="btn btn-secondary">Kembali</a>
-    </div>
+namespace App\Http\Controllers;
 
-    <div class="card card-custom p-3 mb-3">
-        <h5>Informasi Umum</h5>
-        <p><strong>Nomor SPD:</strong> {{ $travel->nomor_spd }}</p>
-        <p><strong>Nama Pegawai:</strong> {{ $travel->nama_pegawai }}</p>
-        <p><strong>Tanggal:</strong> {{ optional($travel->tanggal_spd)->format('Y-m-d') ?? '-' }}</p>
-        <p><strong>Uraian:</strong> {{ $travel->uraian_kegiatan }}</p>
-    </div>
+use Illuminate\Http\Request;
+use App\Models\Travel;
+use PDF; // jika pakai barryvdh/laravel-dompdf
 
-    <div class="card card-custom p-3 mb-3">
-        <h5>Transportasi ({{ $travel->transportItems->count() }})</h5>
-        <table class="table">
-            <thead><tr><th>Mode</th><th>Uraian</th><th class="text-end">Jumlah (Rp)</th></tr></thead>
-            <tbody>
-            @foreach($travel->transportItems as $t)
-                <tr>
-                    <td>{{ $t->mode }}</td>
-                    <td>{{ $t->description }}</td>
-                    <td class="text-end">{{ number_format($t->amount,0,',','.') }}</td>
-                </tr>
-            @endforeach
-            </tbody>
-        </table>
-    </div>
+class SPBYController extends Controller
+{
+    private function defaultSignatories()
+    {
+        return [
+            'bendahara' => [
+                'name' => 'ISWANTONO',
+                'nip'  => '197305062006041004',
+                'position' => 'Bendahara Pengeluaran',
+            ],
+            'penerima' => [
+                'name' => 'NABILILAH',
+                'nip'  => '200109252025042001',
+                'position' => 'Penerima Uang/Uang Muka Kerja',
+            ],
+            'ppk' => [
+                'name' => 'DENI WIJAYANTO',
+                'nip'  => '198005072006041005',
+                'position' => 'Pejabat Pembuat Komitmen',
+            ],
+        ];
+    }
 
-    <div class="card card-custom p-3 mb-3">
-        <h5>Penginapan ({{ $travel->accommodationItems->count() }})</h5>
-        <table class="table">
-            <thead><tr><th>Nama</th><th>Lama Hari</th><th class="text-end">Harga (Rp)</th><th class="text-end">Subtotal (Rp)</th></tr></thead>
-            <tbody>
-            @foreach($travel->accommodationItems as $a)
-                <tr>
-                    <td>{{ $a->name }}</td>
-                    <td>{{ $a->nights }}</td>
-                    <td class="text-end">{{ number_format($a->price,0,',','.') }}</td>
-                    <td class="text-end">{{ number_format($a->nights * $a->price,0,',','.') }}</td>
-                </tr>
-            @endforeach
-            </tbody>
-        </table>
-    </div>
+    private function getSignatories()
+    {
+        $cfg = config('spby.signatories');
+        if (!is_array($cfg) || empty($cfg)) {
+            return $this->defaultSignatories();
+        }
 
-    <div class="card card-custom p-3 mb-3">
-        <h5>Uang Harian ({{ $travel->perdiemItems->count() }})</h5>
-        <table class="table">
-            <thead><tr><th>Kota</th><th>Hari</th><th class="text-end">Rp/hari</th><th class="text-end">Subtotal</th></tr></thead>
-            <tbody>
-            @foreach($travel->perdiemItems as $p)
-                <tr>
-                    <td>{{ $p->city }}</td>
-                    <td>{{ $p->days }}</td>
-                    <td class="text-end">{{ number_format($p->amount,0,',','.') }}</td>
-                    <td class="text-end">{{ number_format($p->days * $p->amount,0,',','.') }}</td>
-                </tr>
-            @endforeach
-            </tbody>
-        </table>
-    </div>
+        // merge missing keys with defaults
+        $default = $this->defaultSignatories();
+        foreach ($default as $k => $v) {
+            if (empty($cfg[$k]) || !is_array($cfg[$k])) {
+                $cfg[$k] = $v;
+            } else {
+                $cfg[$k]['name'] = $cfg[$k]['name'] ?? $v['name'];
+                $cfg[$k]['nip']  = $cfg[$k]['nip'] ?? $v['nip'];
+                $cfg[$k]['position'] = $cfg[$k]['position'] ?? $v['position'];
+            }
+        }
 
-    <div class="card card-custom p-3">
-        <h5>Ringkasan Biaya</h5>
-        <p><strong>Total Transport:</strong> Rp {{ number_format($travel->transport_total,0,',','.') }}</p>
-        <p><strong>Total Penginapan:</strong> Rp {{ number_format($travel->accommodation_total,0,',','.') }}</p>
-        <p><strong>Total Uang Harian:</strong> Rp {{ number_format($travel->perdiem_total,0,',','.') }}</p>
-        <hr>
-        <p class="fs-5"><strong>Grand Total:</strong> Rp {{ number_format($travel->grand_total,0,',','.') }}</p>
-    </div>
-</div>
-@endsection
+        return $cfg;
+    }
+
+    // list SPBY (optional)
+    public function index()
+    {
+        $travels = Travel::with(['transportItems','accommodationItems','perdiemItems'])
+                    ->orderByDesc('created_at')->get();
+
+        return view('SPBY.index', compact('travels'));
+    }
+
+    // show HTML SPBY
+    public function show(Travel $travel)
+    {
+        $travel->load(['transportItems','accommodationItems','perdiemItems']);
+
+        $signatories = $this->getSignatories();
+
+        $transportTotal = $travel->transportItems->sum('amount');
+        $hotelTotal = $travel->accommodationItems->sum(function($i){ return ($i->nights ?? 0) * ($i->price ?? 0); });
+        $perdiemTotal = $travel->perdiemItems->sum(function($p){ return ($p->days ?? 0) * ($p->amount ?? 0); });
+        $grandTotal = $transportTotal + $hotelTotal + $perdiemTotal;
+
+        $terbilang = $this->terbilang($grandTotal);
+
+        return view('SPBY.show', compact('travel','signatories','transportTotal','hotelTotal','perdiemTotal','grandTotal','terbilang'));
+    }
+
+    // download PDF
+    public function pdf(Travel $travel)
+    {
+        $travel->load(['transportItems','accommodationItems','perdiemItems']);
+
+        $signatories = $this->getSignatories();
+
+        $transportTotal = $travel->transportItems->sum('amount');
+        $hotelTotal = $travel->accommodationItems->sum(function($i){ return ($i->nights ?? 0) * ($i->price ?? 0); });
+        $perdiemTotal = $travel->perdiemItems->sum(function($p){ return ($p->days ?? 0) * ($p->amount ?? 0); });
+        $grandTotal = $transportTotal + $hotelTotal + $perdiemTotal;
+
+        $terbilang = $this->terbilang($grandTotal);
+
+        $pdf = PDF::loadView('SPBY.show', compact('travel','signatories','transportTotal','hotelTotal','perdiemTotal','grandTotal','terbilang'));
+        $pdf->setPaper('A4','portrait');
+
+        $filename = 'SPBY_' . $travel->id . '_' . now()->format('Ymd_His') . '.pdf';
+        return $pdf->download($filename);
+    }
+
+    private function terbilang($number)
+    {
+        if ((int)$number === 0) return 'Nol Rupiah';
+        $result = $this->toWords((int)$number);
+        return trim($result) . ' Rupiah';
+    }
+
+    private function toWords($x)
+    {
+        $x = (int)$x;
+        $words = ['', 'Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan','Sepuluh','Sebelas'];
+        if ($x < 12) return $words[$x];
+        if ($x < 20) return $this->toWords($x - 10).' Belas';
+        if ($x < 100) return $this->toWords((int)($x/10)).' Puluh'.($x%10? ' '.$this->toWords($x%10):'');
+        if ($x < 200) return 'Seratus'.($x-100? ' '.$this->toWords($x-100):'');
+        if ($x < 1000) return $this->toWords((int)($x/100)).' Ratus'.($x%100? ' '.$this->toWords($x%100):'');
+        if ($x < 2000) return 'Seribu'.($x-1000? ' '.$this->toWords($x-1000):'');
+        if ($x < 1000000) return $this->toWords((int)($x/1000)).' Ribu'.($x%1000? ' '.$this->toWords($x%1000):'');
+        if ($x < 1000000000) return $this->toWords((int)($x/1000000)).' Juta'.($x%1000000? ' '.$this->toWords($x%1000000):'');
+        return '';
+    }
+}

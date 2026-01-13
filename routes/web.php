@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\DataController;
-use App\Http\Controllers\SPBYController;
+use App\Http\Controllers\SpbyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +28,7 @@ Route::delete('/data/{travel}', [DataController::class, 'destroy'])->name('data.
 // Partial endpoint for AJAX detail
 Route::get('/data/{travel}/partial', [DataController::class, 'partial'])->name('data.partial');
 
-// SPBY (view + pdf)
+// SPBY (list, view + pdf)
+Route::get('/spby', [SpbyController::class, 'index'])->name('spby.index');            // <- baru: daftar SPBY
 Route::get('/data/{travel}/spby', [SpbyController::class, 'show'])->name('data.spby');
 Route::get('/data/{travel}/spby/pdf', [SpbyController::class, 'pdf'])->name('data.spby.pdf');

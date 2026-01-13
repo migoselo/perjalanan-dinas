@@ -66,7 +66,10 @@
         <div class="list-group list-group-flush">
             <a href="{{ route('travel.create') }}" class="list-group-item list-group-item-action {{ request()->routeIs('travel.create') ? 'active' : '' }}">Form Input</a>
             <a href="{{ route('data.index') }}" class="list-group-item list-group-item-action {{ request()->routeIs('data.index') ? 'active' : '' }}">Data</a>
-            <a href="#" class="list-group-item list-group-item-action">SPBY</a>
+            <a href="{{ route('spby.index') }}" class="list-group-item list-group-item-action {{ request()->routeIs('spby.index') ? 'active' : '' }}">SPBY</a>
+
+            <!-- SPBY: buka SPBY untuk travel yang dipilih (query ?selected=ID), fallback ke daftar data -->
+        
             <a href="#" class="list-group-item list-group-item-action">SPD Lembar Depan</a>
             <a href="#" class="list-group-item list-group-item-action">Rincian</a>
             <a href="#" class="list-group-item list-group-item-action">Kuitansi</a>
@@ -75,7 +78,7 @@
         </div>
 
         <div class="mt-auto p-3 small text-muted">
-            © {{ date('Y') }} Sistem Perjalanan Dinas
+            © {{ date(format: 'Y') }} Sistem Perjalanan Dinas
         </div>
     </div>
 
