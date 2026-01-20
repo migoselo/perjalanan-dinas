@@ -115,6 +115,10 @@
 
     <!-- somewhere in resources/views/data/_detail.blade.php -->
     <div class="mb-3 d-flex gap-2">
+        <!-- Form untuk input SPBY -->
+        <a href="{{ route('spby.create', $travel) }}" class="btn btn-success">
+            📋 Buat SPBY
+        </a>
         <!-- buka SPBY HTML di tab baru -->
         <a href="{{ route('data.spby', $travel) }}" target="_blank" rel="noopener" class="btn btn-outline-primary">
             Lihat SPBY

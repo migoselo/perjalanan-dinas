@@ -1,35 +1,9 @@
-<?php
-
-namespace App\Http\Controllers;
-
-use App\Models\Travel;
-use Illuminate\Http\Request;
-
-class TravelController extends Controller
-{
-    public function index()
-    {
-        return redirect()->route('data.index');
-    }
-}
-?>
 @extends('layouts.app')
 
 @section('content')
 <div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="mb-1">Surat Perintah Bayar (SPBY)</h2>
-                    <p class="text-muted">Daftar SPBY berdasarkan data perjalanan dinas</p>
-                </div>
-                <a href="{{ route('data.index') }}" class="btn btn-primary">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Data
-                </a>
-            </div>
-        </div>
-    </div>
+    <h2 class="mb-1">Surat Perintah Perjalanan Dinas (SPD)</h2>
+    <p class="text-muted">Daftar SPD berdasarkan data perjalanan dinas</p>
 
     <div class="row">
         <div class="col-12">
@@ -58,8 +32,7 @@ class TravelController extends Controller
                             </div>
 
                             <div class="mt-3 d-flex gap-2">
-                                <a href="{{ route('data.spby', $travel) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat SPBY</a>
-                                <a href="{{ route('data.spby.pdf', $travel) }}" class="btn btn-sm btn-primary">Unduh PDF</a>
+                                <a href="{{ route('data.spd', $travel) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat SPD</a>
                                 <a href="{{ route('data.index', ['selected' => $travel->id]) }}" class="btn btn-sm btn-outline-secondary">Lihat Detail</a>
                             </div>
                         </div>
@@ -67,7 +40,7 @@ class TravelController extends Controller
                 @endforeach
                 </div>
             @else
-                <div class="alert alert-info">Belum ada data SPBY</div>
+                <div class="alert alert-info">Belum ada data SPD</div>
             @endif
         </div>
     </div>

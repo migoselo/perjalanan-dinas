@@ -58,4 +58,10 @@
         <hr>
         <p class="fs-5"><strong>Grand Total:</strong> Rp {{ number_format($travel->grand_total,0,',','.') }}</p>
     </div>
+
+    <div class="mt-4 d-flex gap-2">
+        <a href="{{ route('data.spby', $travel) }}" class="btn btn-sm btn-primary">Lihat SPBY</a>
+        <a href="{{ route('data.spd', $travel) }}" class="btn btn-sm btn-info">Lihat SPD</a>
+        <a href="{{ route('data.destroy', $travel) }}" class="btn btn-sm btn-danger" onclick="return confirm('Hapus data ini?')">Hapus</a>
+    </div>
 </div>
