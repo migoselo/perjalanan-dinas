@@ -21,7 +21,8 @@ class FormController extends Controller
             'tanggal_spd' => 'nullable|date',
             'sumber_dana' => 'nullable|string|max:255',
             'kode_mak' => 'nullable|string|max:255',
-            'nama_pegawai' => 'nullable|string|max:255',
+            'nama_pegawai' => 'required|string|max:255',
+            'nip' => 'required|digits:18',
             'bukti_kas' => 'nullable|string|max:255',
             'uraian_kegiatan' => 'nullable|string',
             'transportations' => 'nullable|array',
@@ -38,6 +39,7 @@ class FormController extends Controller
                     'sumber_dana' => $data['sumber_dana'] ?? null,
                     'kode_mak' => $data['kode_mak'] ?? null,
                     'nama_pegawai' => $data['nama_pegawai'] ?? null,
+                    'nip' => $data['nip'] ?? null,
                     'bukti_kas' => $data['bukti_kas'] ?? null,
                     'uraian_kegiatan' => $data['uraian_kegiatan'] ?? null,
                 ]);

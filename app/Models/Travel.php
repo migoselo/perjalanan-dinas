@@ -13,8 +13,29 @@ class Travel extends Model
 
     protected $fillable = [
         'nomor_spd','nomor_surat_tugas','tanggal_spd','sumber_dana','kode_mak',
-        'nama_pegawai','bukti_kas','uraian_kegiatan',
+        'nama_pegawai','nip','bukti_kas','uraian_kegiatan','user_id',
+        // kuitansi fields
+        'pemberi_uang','tanggal_pembayaran',
+        // pengikut stored as JSON
+        'pengikut',
+        // stored surat form data
+        'surat_data',
     ];
+
+    protected $casts = [
+        'pengikut' => 'array',
+        'surat_data' => 'array',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function spby()
+    {
+        return $this->hasOne(SPBY::class);
+    }
 
     public function transportItems()
     {
@@ -29,6 +50,11 @@ class Travel extends Model
     public function perdiemItems()
     {
         return $this->hasMany(PerdiemItem::class);
+    }
+
+    public function sptProgres()
+    {
+        return $this->hasMany(SPTProgres::class);
     }
 
     // helper to compute totals

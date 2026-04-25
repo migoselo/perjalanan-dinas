@@ -24,9 +24,6 @@ class TravelController extends Controller
                     <h2 class="mb-1">Surat Perintah Bayar (SPBY)</h2>
                     <p class="text-muted">Daftar SPBY berdasarkan data perjalanan dinas</p>
                 </div>
-                <a href="{{ route('data.index') }}" class="btn btn-primary">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Data
-                </a>
             </div>
         </div>
     </div>

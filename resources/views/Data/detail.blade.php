@@ -10,6 +10,7 @@
             <dt class="col-sm-4 text-muted">Sumber Dana:</dt><dd class="col-sm-8">{{ $travel->sumber_dana }}</dd>
             <dt class="col-sm-4 text-muted">Kode MAK:</dt><dd class="col-sm-8">{{ $travel->kode_mak }}</dd>
             <dt class="col-sm-4 text-muted">Nama Pegawai:</dt><dd class="col-sm-8">{{ $travel->nama_pegawai }}</dd>
+            <dt class="col-sm-4 text-muted">NIP:</dt><dd class="col-sm-8">{{ optional($travel->user)->nip ?? $travel->nip ?? '-' }}</dd>
             <dt class="col-sm-4 text-muted">Bukti Kas:</dt><dd class="col-sm-8">{{ $travel->bukti_kas }}</dd>
             <dt class="col-sm-4 text-muted">Uraian Kegiatan:</dt><dd class="col-sm-8">{{ $travel->uraian_kegiatan }}</dd>
         </dl>
@@ -62,6 +63,9 @@
     <div class="mt-4 d-flex gap-2">
         <a href="{{ route('data.spby', $travel) }}" class="btn btn-sm btn-primary">Lihat SPBY</a>
         <a href="{{ route('data.spd', $travel) }}" class="btn btn-sm btn-info">Lihat SPD</a>
+        <a href="{{ route('surat.index', $travel) }}" class="btn btn-sm btn-success" target="_blank">Lihat Rincian Surat</a>
+        <a href="{{ route('signature.form', $travel) }}" class="btn btn-sm btn-warning">Input Tanda Tangan</a>
+        <a href="{{ route('signature.index', $travel) }}" class="btn btn-sm btn-secondary">Lihat Tanda Tangan</a>
         <a href="{{ route('data.destroy', $travel) }}" class="btn btn-sm btn-danger" onclick="return confirm('Hapus data ini?')">Hapus</a>
     </div>
 </div>

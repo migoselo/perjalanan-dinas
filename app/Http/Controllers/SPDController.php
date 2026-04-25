@@ -11,8 +11,10 @@ class SPDController extends Controller
     // Tampilkan daftar SPD
     public function index()
     {
-        $travels = Travel::with(['transportItems','accommodationItems','perdiemItems'])
-                    ->orderByDesc('created_at')->get();
+        // Load travels dengan spby dan item-item lainnya
+        $travels = Travel::with(['spby', 'transportItems','accommodationItems','perdiemItems'])
+                    ->orderByDesc('created_at')
+                    ->get();
 
         return view('SPD.index', compact('travels'));
     }
@@ -181,39 +183,157 @@ class SPDController extends Controller
         return response()->json(['ok' => true, 'data' => $defaults]);
     }
 
-    // Terima data form dan tampilkan preview surat (blade)
+    // Terima data form, simpan ke DB, dan tampilkan preview surat (blade)
     public function preview(Request $request)
     {
-        $data = $request->only([
-            'recipient_name','recipient_nip','date','departure_date','return_date',
-            'from','to','purpose','activity_mak','number','code','amount','amount_in_words'
-        ]);
+        try {
+            // Validate required fields
+            $request->validate([
+                'nomor_spd' => 'required|string',
+            ]);
+            
+            // Debug: Log request data
+            \Log::info('SPD Preview Request:', $request->only(['nomor_spd', 'nama_pegawai', 'nip_pegawai', 'travel_id']));
+            
+            // Jika ada travel_id, update data existing; jika tidak ada, buat baru berdasarkan nomor_spd
+            $travel_id = $request->input('travel_id');
+            $nomor_spd = $request->input('nomor_spd');
+            
+            if ($travel_id) {
+                // Mode EDIT: Update data yang sudah ada
+                $travel = Travel::findOrFail($travel_id);
+                \Log::info('Travel Found for Edit:', ['id' => $travel->id]);
+            } else {
+                // Mode CREATE: Cek apakah sudah ada dengan nomor_spd yang sama
+                $travel = Travel::where('nomor_spd', $nomor_spd)->first();
+                
+                if (!$travel) {
+                    $travel = new Travel();
+                    $travel->nomor_spd = $nomor_spd;
+                    $travel->save();
+                    \Log::info('New Travel Created:', ['id' => $travel->id, 'nomor_spd' => $nomor_spd]);
+                } else {
+                    \Log::info('Travel Found by nomor_spd:', ['id' => $travel->id, 'nomor_spd' => $nomor_spd]);
+                }
+            }
 
-        // fallback format: jika date kosong gunakan departure_date
-        if (empty($data['date']) && !empty($data['departure_date'])) {
-            $data['date'] = $data['departure_date'];
+            // Simpan atau update data SPBY (related to Travel)
+            $spby = $travel->spby ?? new \App\Models\SPBY();
+            
+            // Get all form data
+            $spby_data = $request->only([
+                'lembar_ke', 'kode_no', 'nomor_spd', 'pejabat_pemberi_perintah',
+                'nama_pegawai', 'nip_pegawai', 'pangkat', 'jabatan', 'tingkat_biaya',
+                'maksud_perjalanan', 'alat_angkutan', 'tempat_berangkat', 'tempat_tujuan',
+                'lama_perjalanan', 'tanggal_berangkat', 'tanggal_kembali',
+                'instansi_pembebanan', 'mata_anggaran', 'keterangan',
+                'tempat_penerbitan', 'tanggal_penerbitan', 'jabatan_penandatangan',
+                'nama_penandatangan', 'nip_penandatangan'
+            ]);
+            
+            \Log::info('SPBY Data to Save:', $spby_data);
+            
+            $spby->fill($spby_data);
+
+            // Simpan SPBY dengan relationship
+            $spby->travel_id = $travel->id;
+            $spby->save();
+            \Log::info('SPBY Saved:', ['id' => $spby->id, 'travel_id' => $travel->id, 'data' => $spby->toArray()]);
+
+            // Reload travel dengan spby yang baru disimpan
+            $travel = Travel::with(['spby', 'user'])->find($travel->id);
+            \Log::info('Travel Reloaded:', ['id' => $travel->id, 'spby_loaded' => $travel->spby ? true : false]);
+
+
+            // Handle pengikut data dari array
+            $pengikut = [];
+            if ($request->has('pengikut_nama')) {
+                $names = $request->input('pengikut_nama', []);
+                $tanggals = $request->input('pengikut_tgl_lahir', []);
+                $keterangan = $request->input('pengikut_keterangan', []);
+
+                foreach ($names as $index => $name) {
+                    if (!empty($name)) {
+                        $p = new \stdClass();
+                        $p->nama = $name;
+                        $p->tanggal_lahir = $tanggals[$index] ?? null;
+                        $p->keterangan = $keterangan[$index] ?? null;
+                        $pengikut[] = $p;
+                    }
+                }
+            }
+            // Persist pengikut into travels.pengikut (JSON)
+            if (!empty($pengikut)) {
+                $travel->pengikut = $pengikut;
+                $travel->save();
+                \Log::info('Pengikut saved to travel:', ['travel_id' => $travel->id, 'count' => count($pengikut)]);
+            }
+
+            // Redirect to show route with flash success message to avoid duplicate displays
+            return redirect()->route('spd.show', $travel->id)->with('success', 'Data SPD berhasil disimpan');
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            return back()->withErrors($ve->errors())->withInput();
+        } catch (\Exception $e) {
+            \Log::error('SPD Preview Error:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return back()->withErrors(['error' => 'Error: ' . $e->getMessage()])->withInput();
         }
+    }
 
-        return view('SPD.show', ['spd' => $data]);
+    // Tampilkan form input SPD (alias untuk create)
+    public function form()
+    {
+        return view('SPD.form', ['travel' => new Travel()]);
+    }
+
+    // Tampilkan form edit SPD
+    public function edit(Travel $travel)
+    {
+        $travel->load(['spby']);
+        return view('SPD.form', compact('travel'));
     }
 
     // Tampilkan SPD dari Travel yang sudah tersimpan
     public function show(Travel $travel)
     {
-        // Ambil data SPD dari travel extra column (JSON)
-        $spd = $travel->extra ? json_decode($travel->extra, true) : [];
-        
-        // Fallback: compile dari travel attributes
-        if (empty($spd)) {
-            $spd = [
-                'recipient_name' => $travel->nama_pegawai ?? '',
-                'date' => $travel->tanggal_spd ?? '',
-                'number' => $travel->nomor_spd ?? '',
-                'activity_mak' => $travel->kode_mak ?? '',
-                'purpose' => $travel->uraian_kegiatan ?? '',
-            ];
+        // Load relasi yang diperlukan
+        $travel->load(['user', 'spby']);
+        return view('SPD.show', compact('travel'));
+    }
+
+    // Hapus data SPD
+    public function destroy(Travel $travel)
+    {
+        try {
+            // Hapus SPBY terlebih dahulu (relasi)
+            if ($travel->spby) {
+                $travel->spby->delete();
+            }
+
+            // Hapus Travel
+            $travel->delete();
+
+            return redirect()->route('spd.index')->with('success', 'Data SPD berhasil dihapus');
+        } catch (\Exception $e) {
+            \Log::error('SPD Delete Error:', ['error' => $e->getMessage()]);
+            return redirect()->route('spd.index')->with('error', 'Error menghapus data: ' . $e->getMessage());
         }
-        
-        return view('SPD.show', ['spd' => $spd]);
+    }
+
+    // Generate PDF dari SPD
+    public function pdf(Travel $travel)
+    {
+        try {
+            $travel->load(['spby']);
+            
+            // Generate PDF dengan dompdf
+            $pdf = \PDF::loadView('SPD.show', compact('travel'));
+            $filename = 'SPD-' . ($travel->spby?->nomor_spd ?? $travel->id) . '.pdf';
+            
+            // Gunakan stream untuk force download
+            return $pdf->stream($filename);
+        } catch (\Exception $e) {
+            \Log::error('SPD PDF Error:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => 'Error membuat PDF: ' . $e->getMessage()], 500);
+        }
     }
 }

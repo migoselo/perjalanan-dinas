@@ -21,6 +21,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="mb-1">{{ $travel->nama_pegawai ?? '—' }}</h6>
+                        <div class="small text-muted">NIP: {{ $travel->nip ?? '-' }}</div>
                         <div class="small text-muted">No. SPD: {{ $travel->nomor_spd ?? '-' }}</div>
                         <div class="small text-muted">Tanggal: {{ optional($travel->tanggal_spd)->format('Y-m-d') ?? '-' }}</div>
                         <div class="small text-muted">Disubmit: {{ $travel->created_at->format('d F Y \p\u\k\u\l H.i') }}</div>
@@ -86,6 +87,8 @@
 document.addEventListener('DOMContentLoaded', function () {
     const params = new URLSearchParams(window.location.search);
     const selectedId = params.get('selected');
+    let currentSelectedId = selectedId;
+    let autoRefreshInterval = null;
 
     function markActive(id) {
         document.querySelectorAll('.list-card').forEach(c => c.classList.remove('active'));
@@ -93,26 +96,67 @@ document.addEventListener('DOMContentLoaded', function () {
         if (el) el.classList.add('active');
     }
 
-    if (selectedId) markActive(selectedId);
+    function loadDetailPanel(id) {
+        const card = document.querySelector('.list-card[data-id="'+id+'"]');
+        if (!card) return;
+
+        const url = card.getAttribute('data-url');
+        if (!url) return;
+
+        console.log('🔄 Loading detail for ID:', id);
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          .then(r => r.text())
+          .then(html => {
+              console.log('✅ Detail loaded');
+              document.getElementById('detail-panel').innerHTML = html;
+              markActive(id);
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.set('selected', id);
+              history.pushState({}, '', newUrl);
+          })
+          .catch(err => console.error('❌ Error loading detail:', err));
+    }
+
+    // ⭐ Auto-refresh detail panel setiap 5 detik
+    function startAutoRefresh(id) {
+        console.log('⏱️  Starting auto-refresh for ID:', id);
+        
+        // Clear interval lama jika ada
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        
+        // Set interval baru
+        autoRefreshInterval = setInterval(() => {
+            console.log('🔄 Auto-refreshing...');
+            loadDetailPanel(id);
+        }, 5000);
+    }
+
+    function stopAutoRefresh() {
+        console.log('⏸️  Stopping auto-refresh');
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+    }
+
+    if (selectedId) {
+        markActive(selectedId);
+        loadDetailPanel(selectedId);
+        startAutoRefresh(selectedId);
+    }
 
     document.querySelectorAll('.list-card').forEach(card => {
         card.addEventListener('click', function (e) {
             if (e.target.closest('.delete-btn')) return;
 
-            const url = card.getAttribute('data-url');
             const id = card.getAttribute('data-id');
-            if (!url) return;
-
-            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-              .then(r => r.text())
-              .then(html => {
-                  document.getElementById('detail-panel').innerHTML = html;
-                  markActive(id);
-                  const newUrl = new URL(window.location.href);
-                  newUrl.searchParams.set('selected', id);
-                  history.pushState({}, '', newUrl);
-              })
-              .catch(err => console.error(err));
+            currentSelectedId = id;
+            
+            // Stop old refresh dan start new one
+            stopAutoRefresh();
+            loadDetailPanel(id);
+            startAutoRefresh(id);
         });
     });
 
@@ -128,6 +172,9 @@ document.addEventListener('DOMContentLoaded', function () {
         form.action = action;
         form.innerHTML = `@csrf @method('DELETE')`;
         document.body.appendChild(form);
+        
+        // Stop refresh sebelum delete
+        stopAutoRefresh();
         form.submit();
     });
 });

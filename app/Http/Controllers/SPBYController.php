@@ -27,9 +27,17 @@ class SpbyController extends Controller
                 $validated = $request->validate([
                     'tanggal_spby' => 'required|date',
                     'nomor_spby' => 'required|string',
-                    'untuk_pembayaran' => 'required|string',
-                    'jumlah_pembayaran' => 'required|numeric|min:0',
                 ]);
+
+                // Get total from travel items
+                $transportTotal = $travel->transportItems->sum('amount');
+                $hotelTotal = $travel->accommodationItems->sum(function ($i) {
+                    return ($i->nights ?? 0) * ($i->price ?? 0);
+                });
+                $perdiemTotal = $travel->perdiemItems->sum(function ($p) {
+                    return ($p->days ?? 0) * ($p->amount ?? 0);
+                });
+                $grandTotal = $transportTotal + $hotelTotal + $perdiemTotal;
 
                 // Save or update SPBY for this travel
                 SPBY::updateOrCreate(
@@ -37,8 +45,8 @@ class SpbyController extends Controller
                     [
                         'tanggal_spby' => $validated['tanggal_spby'],
                         'nomor_spby' => $validated['nomor_spby'],
-                        'keterangan' => $validated['untuk_pembayaran'],
-                        'jumlah_pembayaran' => $validated['jumlah_pembayaran'],
+                        'keterangan' => $travel->uraian_kegiatan ?? 'Perjalanan Dinas',
+                        'jumlah_pembayaran' => $grandTotal,
                     ]
                 );
 
@@ -53,8 +61,18 @@ class SpbyController extends Controller
                 if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                     return response()->json([
                         'success' => false,
+                        'message' => 'Validasi gagal',
                         'errors' => $e->errors()
                     ], 422);
+                }
+                throw $e;
+            } catch (\Exception $e) {
+                // Handle other errors
+                if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                    ], 500);
                 }
                 throw $e;
             }
@@ -63,11 +81,12 @@ class SpbyController extends Controller
         // Get form data or defaults from database or form input
         $spbyRecord = SPBY::where('travel_id', $travel->id)->first();
         
+        // Always get the latest data from database if it exists, otherwise use defaults
         $formData = [
-            'date' => $request->input('date', $spbyRecord?->tanggal_spby?->format('Y-m-d') ?? now()->format('Y-m-d')),
-            'number' => $request->input('number', $spbyRecord?->nomor_spby ?? ''),
-            'purpose' => $request->input('purpose', $spbyRecord?->keterangan ?? $travel->uraian_kegiatan ?? "Perjalanan Dinas ke " . ($travel->destination ?? 'destinasi')),
-            'amount' => $request->input('amount', (int)($spbyRecord?->jumlah_pembayaran ?? $this->calculateTotal($travel))),
+            'date' => $spbyRecord?->tanggal_spby?->format('Y-m-d') ?? now()->format('Y-m-d'),
+            'number' => $spbyRecord?->nomor_spby ?? '',
+            'purpose' => $spbyRecord?->keterangan ?? $travel->uraian_kegiatan ?? "Perjalanan Dinas ke " . ($travel->destination ?? 'destinasi'),
+            'amount' => (int)($spbyRecord?->jumlah_pembayaran ?? $this->calculateTotal($travel)),
         ];
 
         // Prepare SPBY data with current form inputs

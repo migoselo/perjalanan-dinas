@@ -47,4 +47,47 @@ class DataController extends Controller
         $travel->delete();
         return redirect()->route('data.index')->with('success','Data dihapus.');
     }
+
+    public function edit(Travel $travel)
+    {
+        $travel->load(['transportItems', 'accommodationItems', 'perdiemItems']);
+        return view('Data.edit', compact('travel'));
+    }
+
+    public function update(Request $request, Travel $travel)
+    {
+        $validatedData = $request->validate([
+            'spd_number' => 'required|string|max:255',
+            'date' => 'required|date',
+            'transportItems.*.description' => 'nullable|string',
+            'transportItems.*.amount' => 'nullable|numeric',
+            'transportItems.*.details' => 'nullable|string',
+            'accommodationItems.*.description' => 'nullable|string',
+            'accommodationItems.*.amount' => 'nullable|numeric',
+            'accommodationItems.*.details' => 'nullable|string',
+            'perdiemItems.*.description' => 'nullable|string',
+            'perdiemItems.*.amount' => 'nullable|numeric',
+            'perdiemItems.*.details' => 'nullable|string',
+        ]);
+
+        $travel->update($validatedData);
+
+        // Update related items
+        if ($request->has('transportItems')) {
+            $travel->transportItems()->delete();
+            $travel->transportItems()->createMany($validatedData['transportItems']);
+        }
+
+        if ($request->has('accommodationItems')) {
+            $travel->accommodationItems()->delete();
+            $travel->accommodationItems()->createMany($validatedData['accommodationItems']);
+        }
+
+        if ($request->has('perdiemItems')) {
+            $travel->perdiemItems()->delete();
+            $travel->perdiemItems()->createMany($validatedData['perdiemItems']);
+        }
+
+        return redirect()->route('data.show', $travel)->with('success', 'Data berhasil diperbarui.');
+    }
 }

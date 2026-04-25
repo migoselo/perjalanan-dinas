@@ -314,7 +314,7 @@
           <div class="amount-box">
             <div class="amount-row">
               <div class="label">Rp.</div>
-              <div class="amount">{{ number_format($spbyRecord?->jumlah_pembayaran ?? $grandTotal ?? 0, 0, ',', '.') }}</div>
+              <div class="amount">{{ number_format($travel->grand_total ?? 0, 0, ',', '.') }}</div>
             </div>
             <div class="terbilang">
               Terbilang : {{ $spbyRecord?->amount_in_words ?? $terbilang ?? 'Nol Rupiah' }}
@@ -330,12 +330,12 @@
             <tr>
               <td style="padding: 2px 0; white-space: nowrap; padding-right: 8px; vertical-align: top;">Kepada</td>
               <td style="padding: 2px 0; white-space: nowrap; vertical-align: top;">:</td>
-              <td style="padding: 2px 0; padding-left:3px; vertical-align: top; word-wrap: break-word;">{{ $spbyRecord?->recipient_name ?? 'NABILAH' }}</td>
+              <td style="padding: 2px 0; padding-left:3px; vertical-align: top; word-wrap: break-word;">{{ $travel->nama_pegawai ?? $spbyRecord?->recipient_name ?? 'NABILAH' }}</td>
             </tr>
             <tr>
               <td style="padding: 2px 0; white-space: nowrap; padding-right: 8px; vertical-align: top;">Untuk pembayaran</td>
               <td style="padding: 2px 0; white-space: nowrap; vertical-align: top;">:</td>
-              <td style="padding: 2px 0; padding-left:3px; vertical-align: top; word-wrap: break-word;">{{ $spbyRecord?->keterangan ?? 'Perjalanan Dinas' }}</td>
+              <td style="padding: 2px 0; padding-left:3px; vertical-align: top; word-wrap: break-word;">{{ $travel->uraian_kegiatan ?? 'Perjalanan Dinas' }}</td>
             </tr>
           </table>
 
@@ -353,7 +353,7 @@
               <tr>
                 <td style="padding: 2px 0; width:130px;">Kegiatan, output, MAK</td>
                 <td style="padding: 2px 0; width:10px;">:</td>
-                <td style="padding: 2px 0; padding-left:3px;">{{ $spbyRecord?->activity_mak ?? '7437.BAH.078.101.C.524119' }}</td>
+                <td style="padding: 2px 0; padding-left:3px;">{{ $travel->kode_mak ?? $spbyRecord?->activity_mak ?? '7437.BAH.078.101.C.524119' }}</td>
               </tr>
               <tr>
                 <td style="padding: 2px 0;">Kode</td>
@@ -365,24 +365,28 @@
 
           <div class="divider" style="margin-top:20px;"></div>
 
-          <div style="font-family: 'Calibri', Times, serif; font-size: 14px; margin-bottom: 8px; margin-top: 25px; display: flex; justify-content: space-between; gap: 8px; margin-left: -10px;">
-            <div style="flex: 1; text-align: center; white-space: nowrap;">
-              <span style="display: inline;">Setuju/Lunas dibayar, tanggal,</span>
-              <span style="margin-left: 2px; display: inline;">{{ now()->format('d F Y') }}</span>
+          <div style="font-family: 'Calibri', Times, serif; font-size: 13.5px; margin-bottom: 8px; margin-top: 25px; display: flex; gap: 30px;">
+            <div style="width:33.333%; display:flex; justify-content:center; align-items:flex-start; white-space:nowrap; transform: translateX(10px);">
+              <div style="display:inline-flex; align-items:center;">
+                <span style="display: inline;">Setuju/Lunas dibayar, tanggal,</span>
+                <span style="margin-left: 2px; display: inline;">{{ $spbyRecord?->tanggal_spby?->format('d F Y') ?? now()->format('d F Y') }}</span>
+              </div>
             </div>
-            <div style="flex: 1; text-align: center; white-space: nowrap;">
-              <span style="display: inline;">Diterima tanggal,</span>
-              <span style="margin-left: 2px; display: inline;">{{ now()->format('d F Y') }}</span>
+
+            <div style="width:33.333%; display:flex; justify-content:center; align-items:flex-start; white-space:nowrap; transform: translateX(20px);">
+              <div style="display:inline-flex; align-items:center;">
+                <span style="display: inline;">Diterima tanggal,</span>
+                <span style="margin-left: 2px; display: inline;">{{ $spbyRecord?->tanggal_spby?->format('d F Y') ?? now()->format('d F Y') }}</span>
+              </div>
             </div>
-            <div style="flex: 1; text-align: center;">
-              <div style="white-space: nowrap; display: flex; flex-direction: column; align-items: center;">
-                <div>
+
+            <div style="width:33.333%; display:flex; justify-content:center; align-items:flex-start; white-space:nowrap;">
+              <div style="display:inline-flex; flex-direction:column; align-items:center;">
+                <div style="display:inline-flex; align-items:center;">
                   <span style="display: inline;">Tanjung Selor,</span>
-                  <span style="margin-left: 2px; display: inline;">{{ now()->format('d F Y') }}</span>
+                  <span style="margin-left: 2px; display: inline;">{{ $spbyRecord?->tanggal_spby?->format('d F Y') ?? now()->format('d F Y') }}</span>
                 </div>
-                <div style="font-size: 14px; margin-top: 10px;">
-                  a.n. Kuasa Pengguna Anggaran
-                </div>
+                <div style="font-size: 14px; margin-top: 10px;">a.n. Kuasa Pengguna Anggaran</div>
               </div>
             </div>
           </div>

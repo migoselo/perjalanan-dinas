@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'google' => [
+    'drive' => [
+        'credentials_path' => env('GOOGLE_DRIVE_CREDENTIALS_PATH'),
+        'credentials_json' => env('GOOGLE_DRIVE_CREDENTIALS_JSON'),
+        'root_folder_id' => env('GOOGLE_DRIVE_ROOT_FOLDER_ID'),
+        ],
+    ],
+
 ];

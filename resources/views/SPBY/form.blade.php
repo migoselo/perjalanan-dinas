@@ -154,15 +154,28 @@
       font-size: 12px;
     }
 
-    .success-message {
+      .success-message {
       display: none;
       background: #d4edda;
       border: 1px solid #c3e6cb;
       color: #155724;
-      padding: 12px;
+      padding: 15px;
       border-radius: 4px;
       margin-bottom: 20px;
       text-align: center;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-in-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .success-message.show {
@@ -428,7 +441,7 @@
   <div class="container">
     <!-- Success Message -->
     <div class="success-message" id="successMessage">
-      ✓ SPBY berhasil disimpan!
+      ✓ SPBY berhasil disimpan! Halaman akan dimuat ulang...
     </div>
 
     <!-- Error Message -->
@@ -442,6 +455,9 @@
       <div class="info-box">
         <strong>ℹ️ Informasi:</strong>
         Isi form di bawah untuk membuat Surat Perintah Bayar. Preview akan ditampilkan di halaman terpisah.
+        @if($formData['number'] && $formData['date'])
+          <br><span style="color: #27ae60; margin-top: 8px; display: block;">✓ Data terakhir disimpan: {{ $formData['date'] }} - Nomor: {{ $formData['number'] }}</span>
+        @endif
       </div>
 
       <form id="spbyForm" action="{{ route('spby.store', $travel) }}" method="POST">
@@ -457,18 +473,6 @@
           <label for="number">Nomor SPBY *</label>
           <input type="text" id="number" name="nomor_spby" placeholder="Contoh: 507" value="{{ $formData['number'] }}" required>
           <small>Format: [nomor], bulan & tahun otomatis</small>
-        </div>
-
-        <div class="form-group">
-          <label for="purpose">Untuk Pembayaran *</label>
-          <input type="text" id="purpose" name="untuk_pembayaran" placeholder="Contoh: Perjalanan Dinas ke destinasi" value="{{ $formData['purpose'] ?? '' }}" required>
-          <small>Deskripsi pembayaran</small>
-        </div>
-
-        <div class="form-group">
-          <label for="amount">Jumlah Pembayaran (Rp) *</label>
-          <input type="text" id="amount" name="jumlah_pembayaran" placeholder="Contoh: 7.634.146" value="{{ number_format($formData['amount'] ?? 0, 0, ',', '.') }}" required>
-          <small>Dari Data atau input manual</small>
         </div>
 
         <div class="button-group">
@@ -515,10 +519,10 @@
           <div class="amount-box">
             <div class="amount-row">
               <div class="label">Rp.</div>
-              <div class="amount" id="preview-amount">___</div>
+              <div class="amount">{{ number_format($travel->grand_total ?? 0, 0, ',', '.') }}</div>
             </div>
             <div class="terbilang">
-              Terbilang : <span id="preview-terbilang">___</span>
+              Terbilang : {{ terbilang($travel->grand_total ?? 0) }} Rupiah
             </div>
           </div>
 
@@ -531,7 +535,7 @@
             <tr>
               <td style="padding: 2px 0; white-space: nowrap; padding-right: 8px; vertical-align: top;">Kepada</td>
               <td style="padding: 2px 0; white-space: nowrap; vertical-align: top;">:</td>
-              <td style="padding: 2px 0; padding-left:3px; vertical-align: top; word-wrap: break-word;">NABILAH</td>
+              <td style="padding: 2px 0; padding-left:3px; vertical-align: top; word-wrap: break-word;">{{ $travel->nama_pegawai ?? 'NABILAH' }}</td>
             </tr>
             <tr>
               <td style="padding: 2px 0; white-space: nowrap; padding-right: 8px; vertical-align: top;">Untuk pembayaran</td>
@@ -554,7 +558,7 @@
               <tr>
                 <td style="padding: 2px 0; width:130px;">Kegiatan, output, MAK</td>
                 <td style="padding: 2px 0; width:10px;">:</td>
-                <td style="padding: 2px 0; padding-left:3px;">7437.BAH.078.101.C.524119</td>
+                <td style="padding: 2px 0; padding-left:3px;">{{ $travel->kode_mak ?? '7437.BAH.078.101.C.524119' }}</td>
               </tr>
               <tr>
                 <td style="padding: 2px 0;">Kode</td>
@@ -566,7 +570,7 @@
 
           <div class="divider" style="margin-top:20px;"></div>
 
-          <div style="font-family: 'Calibri', Times, serif; font-size: 14px; margin-bottom: 8px; margin-top: 25px; display: flex; justify-content: space-between; gap: 8px; margin-left: -40px;">
+          <div style="font-family: 'Calibri', Times, serif; font-size: 14px; margin-bottom: 8px; margin-top: 25px; display: flex; justify-content: space-between; gap: 8px; margin-left: -10px;">
             <div style="flex: 1; text-align: center; white-space: nowrap;">
               <span style="display: inline;">Setuju/Lunas dibayar, tanggal,</span>
               <span style="margin-left: 2px; display: inline;" id="date-1">Desember 2025</span>
@@ -668,8 +672,7 @@
     function updatePreview() {
       const date = document.getElementById('date').value;
       const number = document.getElementById('number').value;
-      const amountInput = document.getElementById('amount').value;
-      const purpose = document.getElementById('purpose').value || 'Perjalanan Dinas';
+      const purpose = 'Perjalanan Dinas';
 
       if (!date) {
         document.getElementById('preview-date').textContent = '___';
@@ -702,16 +705,6 @@
         document.getElementById('date-3').textContent = signatureDate;
       }
 
-      // Update amount and terbilang
-      const amount = parseRp(amountInput);
-      if (amount > 0) {
-        document.getElementById('preview-amount').textContent = `${formatRp(amount)},-`;
-        document.getElementById('preview-terbilang').textContent = `${terbilang(amount)} Rupiah`;
-      } else {
-        document.getElementById('preview-amount').textContent = '___';
-        document.getElementById('preview-terbilang').textContent = '___';
-      }
-
       // Update purpose
       document.getElementById('preview-purpose').textContent = purpose;
     }
@@ -719,86 +712,79 @@
     // Add event listeners for real-time update
     document.getElementById('date').addEventListener('change', updatePreview);
     document.getElementById('number').addEventListener('input', updatePreview);
-    document.getElementById('purpose').addEventListener('input', updatePreview);
-    
-    document.getElementById('amount').addEventListener('blur', function() {
-      this.value = formatRp(this.value);
-      updatePreview();
-    });
 
-    document.getElementById('amount').addEventListener('focus', function() {
-      this.value = parseRp(this.value);
-    });
-
-    document.getElementById('amount').addEventListener('input', updatePreview);
-
-    // Format input field on blur
-    document.getElementById('amount').addEventListener('blur', function() {
-      this.value = formatRp(this.value);
-    });
-
-    // Clean input on focus
-    document.getElementById('amount').addEventListener('focus', function() {
-      this.value = parseRp(this.value);
-    });
-
-    // Submit SPBY form via AJAX
-    function submitSpbyForm(e) {
-      e.preventDefault();
+    // Submit form handler
+    function submitSpbyForm(event) {
+      event.preventDefault();
       
       const form = document.getElementById('spbyForm');
+      const submitBtn = event.target;
+      const originalText = submitBtn.innerHTML;
+      
+      // Get form values
+      const dateValue = document.getElementById('date').value;
+      const numberValue = document.getElementById('number').value;
+      
+      // Validate
+      if (!dateValue || !numberValue) {
+        const errorMsg = document.getElementById('errorMessage');
+        errorMsg.textContent = '❌ Tanggal dan Nomor SPBY tidak boleh kosong!';
+        errorMsg.classList.add('show');
+        setTimeout(() => errorMsg.classList.remove('show'), 4000);
+        return;
+      }
+      
+      // Disable button during submission
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ Menyimpan...';
+      
+      // Create FormData from form
       const formData = new FormData(form);
       
-      // Convert Rp formatted number to plain number before sending
-      const amountField = document.getElementById('amount');
-      formData.set('jumlah_pembayaran', parseRp(amountField.value));
-
+      // Submit via fetch for better error handling
       fetch(form.action, {
         method: 'POST',
         body: formData,
         headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         }
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
-        const successMsg = document.getElementById('successMessage');
-        const errorMsg = document.getElementById('errorMessage');
-
         if (data.success) {
-          // Show success message
-          successMsg.textContent = '✓ SPBY berhasil disimpan!';
+          // Show success message with saved data
+          const successMsg = document.getElementById('successMessage');
+          successMsg.innerHTML = `✓ SPBY berhasil disimpan!<br><small style="font-size: 12px; margin-top: 5px; display: block;">Tanggal: ${dateValue} | Nomor: ${numberValue}</small>`;
           successMsg.classList.add('show');
-          errorMsg.classList.remove('show');
-
-          // Hide success message after 3 seconds
+          
+          // Reload preview after delay
           setTimeout(() => {
-            successMsg.classList.remove('show');
-          }, 3000);
-
-          // Notify all open preview windows to reload
-          window.postMessage({ type: 'SPBY_DATA_UPDATED' }, '*');
-        } else if (data.errors) {
-          // Show validation errors
-          let errorText = 'Terjadi kesalahan validasi:\n';
-          for (let field in data.errors) {
-            errorText += '• ' + data.errors[field].join(', ') + '\n';
-          }
-          errorMsg.textContent = errorText;
-          errorMsg.classList.add('show');
-          successMsg.classList.remove('show');
+            location.reload();
+          }, 2000);
         } else {
-          errorMsg.textContent = '❌ Gagal menyimpan SPBY: ' + (data.message || 'Terjadi kesalahan');
-          errorMsg.classList.add('show');
-          successMsg.classList.remove('show');
+          throw new Error(data.message || 'Gagal menyimpan data');
         }
       })
       .catch(error => {
         console.error('Error:', error);
+        
+        // Show error message
         const errorMsg = document.getElementById('errorMessage');
-        errorMsg.textContent = '❌ Terjadi kesalahan saat menyimpan';
+        errorMsg.textContent = '❌ ' + (error.message || 'Terjadi kesalahan saat menyimpan');
         errorMsg.classList.add('show');
+        
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        
+        // Auto hide error after 5 seconds
+        setTimeout(() => errorMsg.classList.remove('show'), 5000);
       });
     }
 

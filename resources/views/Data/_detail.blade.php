@@ -3,6 +3,7 @@
         <h6>Informasi Umum</h6>
         <p class="mb-1"><strong>Nomor SPD:</strong> {{ $travel->nomor_spd ?? '-' }}</p>
         <p class="mb-1"><strong>Nama Pegawai:</strong> {{ $travel->nama_pegawai ?? '-' }}</p>
+        <p class="mb-1"><strong>NIP:</strong> {{ optional($travel->user)->nip ?? $travel->nip ?? '-' }}</p>
         <p class="mb-1"><strong>Tanggal:</strong> {{ optional($travel->tanggal_spd)->format('Y-m-d') ?? '-' }}</p>
         <p class="mb-0"><strong>Uraian:</strong> {{ $travel->uraian_kegiatan ?? '-' }}</p>
     </div>

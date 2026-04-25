@@ -29,16 +29,23 @@
 
         <div class="col-md-6 mb-3">
             <label class="label-number">6. Nama Pegawai</label>
-            <input type="text" name="nama_pegawai" value="{{ old('nama_pegawai') }}" class="form-control form-control-custom" placeholder="Masukkan nama lengkap">
+            <input type="text" name="nama_pegawai" value="{{ old('nama_pegawai') }}" class="form-control form-control-custom" placeholder="Masukkan nama lengkap" required>
         </div>
 
         <div class="col-md-6 mb-3">
-            <label class="label-number">7. Bukti Kas</label>
+            <label class="label-number">7. NIP</label>
+            <input type="text" id="nip_input" name="nip" value="{{ old('nip') }}" class="form-control form-control-custom" placeholder="Masukkan NIP (18 digit)" required minlength="18" maxlength="18" pattern="\d{18}" inputmode="numeric" title="Masukkan 18 digit NIP tanpa spasi">
+            <small class="form-text text-muted">Format: 18 digit angka (contoh: 195203121987031001)</small>
+            <small id="nip_counter" class="form-text text-info" style="display: block; margin-top: 0.25rem;">0/18</small>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="label-number">8. Bukti Kas</label>
             <input type="text" name="bukti_kas" value="{{ old('bukti_kas') }}" class="form-control form-control-custom" placeholder="Nomor bukti kas">
         </div>
 
         <div class="col-12 mb-3">
-            <label class="label-number">8. Uraian Kegiatan</label>
+            <label class="label-number">9. Uraian Kegiatan</label>
             <textarea name="uraian_kegiatan" rows="3" class="form-control form-control-custom" placeholder="Jelaskan kegiatan perjalanan dinas">{{ old('uraian_kegiatan') }}</textarea>
         </div>
     </div>
